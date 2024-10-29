@@ -1,456 +1,222 @@
 "use client"
-import React, { useState } from 'react'
-import { ethers } from "ethers"
-import TradeForm from '@/components/TradeForm';
-// import { abi } from "/Users/vigneshkaleeswaran/trading_software/my-app/smart_contract/abi.js"; 
-// remove contract address and abi from here after fixing the issue 
+import {useState} from "react";
+// import {useEffect, useState} from "react";
+import {ethers} from "ethers";
+import erc20abi from "./ERC20abi.json";
+import TxList from "./TxList";
 
-const contractAddress = '0xb82f974f7b52792eC83255a27FC89bA07E90bF5A';
-const abi = [
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "spender",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "approve",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "initialOwner",
-				"type": "address"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "spender",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "allowance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "needed",
-				"type": "uint256"
-			}
-		],
-		"name": "ERC20InsufficientAllowance",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "balance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "needed",
-				"type": "uint256"
-			}
-		],
-		"name": "ERC20InsufficientBalance",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "approver",
-				"type": "address"
-			}
-		],
-		"name": "ERC20InvalidApprover",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "receiver",
-				"type": "address"
-			}
-		],
-		"name": "ERC20InvalidReceiver",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			}
-		],
-		"name": "ERC20InvalidSender",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "spender",
-				"type": "address"
-			}
-		],
-		"name": "ERC20InvalidSpender",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "mint",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			}
-		],
-		"name": "OwnableInvalidOwner",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "OwnableUnauthorizedAccount",
-		"type": "error"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "spender",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "Approval",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "transfer",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "from",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "Transfer",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "from",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			}
-		],
-		"name": "transferFrom",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "spender",
-				"type": "address"
-			}
-		],
-		"name": "allowance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "balanceOf",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "decimals",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "name",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "symbol",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "totalSupply",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
-]
+export default function App() {
+    const [txs, setTxs] = useState([]);
+    // const [contractListened, setContractListened] = useState();
+    const [contractInfo, setContractInfo] = useState({
+        address: "0xb82f974f7b52792eC83255a27FC89bA07E90bF5A",
+        tokenName: "BTH",
+        tokenSymbol: "-",
+        totalSupply: "-"
+    });
+    const [balanceInfo, setBalanceInfo] = useState({
+        address: "-",
+        balance: "-"
+    });
 
-export default function trade() {
+    // useEffect(() => {
+    //     if (contractInfo.address !== "-") {
+    //         const provider = new ethers.BrowserProvider(window.ethereum);
+    //         const erc20 = new ethers.Contract(
+    //             contractInfo.address,
+    //             erc20abi,
+    //             provider
+    //         );
+    //
+    //         erc20.on("Transfer", (from, to, amount, event) => {
+    //             console.log({from, to, amount, event});
+    //
+    //             setTxs((currentTxs) => [
+    //                 ...currentTxs,
+    //                 {
+    //                     txHash: event.transactionHash,
+    //                     from,
+    //                     to,
+    //                     amount: String(amount)
+    //                 }
+    //             ]);
+    //         });
+    //         setContractListened(erc20);
+    //
+    //         return () => {
+    //             contractListened.removeAllListeners();
+    //         };
+    //     }
+    // }, [contractInfo.address]);
 
-    const [recipient, setRecipient] = useState('');
-    const [amount, setAmount] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-
-    const mintTokens = async () => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
         const provider = new ethers.BrowserProvider(window.ethereum);
+
+        const erc20 = new ethers.Contract(data.get("addr"), erc20abi, provider);
+
+        const tokenName = await erc20.name();
+        const tokenSymbol = await erc20.symbol();
+        const totalSupply = await erc20.totalSupply();
+
+        setContractInfo({
+            address: data.get("addr"),
+            tokenName,
+            tokenSymbol,
+            totalSupply
+        });
+    };
+
+    const getMyBalance = async () => {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const erc20 = new ethers.Contract(contractInfo.address, erc20abi, provider);
         const signer = await provider.getSigner();
-        const contract = new ethers.Contract(contractAddress, abi, signer);
-        const mintTokens = async () => {
-            try {
-                await contract.transfer(recipient, amount);
-                setSuccessMessage('successful!');
-            } catch (error) {
-                console.error('Error minting tokens:', error);
-            }
-        };
-    }
+        const signerAddress = await signer.getAddress();
+        const balance = await erc20.balanceOf(signerAddress);
 
-  return (
-        <div>
-            <h1 className="text-2x1 font-bold mb-6">Transfer</h1>
-                <input type="text" placeholder="Recipient Address" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
-                <input type="text" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                <button 
-                className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800" 
-                onClick={mintTokens}>Execute</button>
-                {successMessage && <p>{successMessage}</p>}
+        setBalanceInfo({
+            address: signerAddress,
+            balance: String(balance)
+        });
+    };
 
-            <TradeForm />
+    const handleTransfer = async (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = await provider.getSigner();
+        const erc20 = new ethers.Contract(contractInfo.address, erc20abi, signer);
+        await erc20.transfer(data.get("recipient"), data.get("amount"));
+    };
+
+    return (
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div>
+                <form className="m-4" onSubmit={handleSubmit}>
+                    <div className="credit-card w-full lg:w-3/4 sm:w-auto shadow-lg mx-auto rounded-xl bg-white">
+                        <main className="mt-4 p-4">
+                            <h1 className="text-xl font-semibold text-gray-700 text-center">
+                                Read from smart contract
+                            </h1>
+                            <div className="">
+                                <div className="my-3">
+                                    <input
+                                        type="text"
+                                        name="addr"
+                                        className="input input-bordered block w-full focus:ring focus:outline-none"
+                                        placeholder="ERC20 contract address"
+                                    />
+                                </div>
+                            </div>
+                        </main>
+                        <footer className="p-4">
+                            <button
+                                type="submit"
+                                className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
+                            >
+                                Get token info
+                            </button>
+                        </footer>
+                        <div className="px-4">
+                            <div className="overflow-x-auto">
+                                <table className="table w-full">
+                                    <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Symbol</th>
+                                        <th>Total supply</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <th>{contractInfo.tokenName}</th>
+                                        <td>{contractInfo.tokenSymbol}</td>
+                                        <td>{String(contractInfo.totalSupply)}</td>
+                                        {/*<td>{contractInfo.deployedAt}</td>*/}
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div className="p-4">
+                            <button
+                                onClick={getMyBalance}
+                                type="submit"
+                                className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
+                            >
+                                Get my balance
+                            </button>
+                        </div>
+                        <div className="px-4">
+                            <div className="overflow-x-auto">
+                                <table className="table w-full">
+                                    <thead>
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <th>{balanceInfo.address}</th>
+                                        <td>{balanceInfo.balance}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div className="m-4 credit-card w-full lg:w-3/4 sm:w-auto shadow-lg mx-auto rounded-xl bg-white">
+                    <div className="mt-4 p-4">
+                        <h1 className="text-xl font-semibold text-gray-700 text-center">
+                            Write to contract
+                        </h1>
+
+                        <form onSubmit={handleTransfer}>
+                            <div className="my-3">
+                                <input
+                                    type="text"
+                                    name="recipient"
+                                    className="input input-bordered block w-full focus:ring focus:outline-none"
+                                    placeholder="Recipient address"
+                                />
+                            </div>
+                            <div className="my-3">
+                                <input
+                                    type="text"
+                                    name="amount"
+                                    className="input input-bordered block w-full focus:ring focus:outline-none"
+                                    placeholder="Amount to transfer"
+                                />
+                            </div>
+                            <footer className="p-4">
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary submit-button focus:ring focus:outline-none w-full"
+                                >
+                                    Transfer
+                                </button>
+                            </footer>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div className="m-4 credit-card w-full lg:w-3/4 sm:w-auto shadow-lg mx-auto rounded-xl bg-white">
+                    <div className="mt-4 p-4">
+                        <h1 className="text-xl font-semibold text-gray-700 text-center">
+                            Recent transactions
+                        </h1>
+                        <p>
+                            <TxList txs={txs}/>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
-  )
+    );
 }
